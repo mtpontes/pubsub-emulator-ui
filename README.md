@@ -2,6 +2,8 @@
 
 A web interface to interact with the Google Cloud Pub/Sub Emulator. This tool allows you to easily manage topics and subscriptions, publish messages, and view received messages in a local environment.
 
+![PubSub Emulator UI](./assets/topics.png)
+
 ## Features
 
 - **Topics & Subscriptions**: View and manage your Pub/Sub topics and subscriptions.

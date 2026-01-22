@@ -2,6 +2,8 @@
 
 Uma interface web para interagir com o emulador do Google Cloud Pub/Sub. Esta ferramenta permite gerenciar tópicos e assinaturas, publicar mensagens e visualizar mensagens recebidas em um ambiente local de forma simples.
 
+![PubSub Emulator UI](./assets/topics.png)
+
 ## Funcionalidades
 
 - **Tópicos e Assinaturas**: Visualize e gerencie seus tópicos e assinaturas do Pub/Sub.
