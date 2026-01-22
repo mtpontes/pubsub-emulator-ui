@@ -1,0 +1,20 @@
+services:
+  nvt-pubsub-emulator:
+    image: google/cloud-sdk:emulators
+    container_name: nvt-pubsub-emulator
+    command: >
+      sh -c "gcloud beta emulators pubsub start --host-port=0.0.0.0:${PUBSUB_EMULATOR_PORT:-10001}"
+    ports:
+      - "${PUBSUB_EMULATOR_PORT:-10001}:${PUBSUB_EMULATOR_PORT:-10001}"
+
+  nvt-pubsub-emulator-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nvt-pubsub-emulator-ui
+    environment:
+      - PUBSUB_EMULATOR_PORT=${PUBSUB_EMULATOR_PORT:-10001}
+    ports:
+      - "5173:80"
+    depends_on:
+      - nvt-pubsub-emulator
