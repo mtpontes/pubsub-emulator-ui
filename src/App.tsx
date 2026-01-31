@@ -5,6 +5,7 @@ import { PubSubService } from './services/pubsub';
 import type { Topic, Subscription } from './services/pubsub';
 import { Publisher } from './components/Publisher';
 import { Subscriber } from './components/Subscriber';
+import { Modal } from './components/Modal';
 import './index.css';
 
 function App() {
@@ -16,6 +17,12 @@ function App() {
   const [view, setView] = useState<'topics' | 'subscriptions'>('topics');
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
 
+  // Modal State
+  const [createTopicModalOpen, setCreateTopicModalOpen] = useState(false);
+  const [createSubModalOpen, setCreateSubModalOpen] = useState(false);
+  const [newTopicName, setNewTopicName] = useState('');
+  const [newSubName, setNewSubName] = useState('');
+  const [selectedTopicForSub, setSelectedTopicForSub] = useState('');
   const fetchData = async () => {
     setLoading(true);
     setError(null);
@@ -38,15 +45,20 @@ function App() {
   }, [projectId]);
 
   const handleCreateTopic = async () => {
-    const topicId = prompt('Enter Topic ID:');
-    if (!topicId) return;
+    setNewTopicName('');
+    setCreateTopicModalOpen(true);
+  };
+
+  const submitCreateTopic = async () => {
+    if (!newTopicName) return;
 
     // Normalize topic ID (handle if user enters full path)
-    const finalTopicId = topicId.includes('/') ? topicId.split('/').pop() : topicId;
+    const finalTopicId = newTopicName.includes('/') ? newTopicName.split('/').pop() : newTopicName;
     if (!finalTopicId) return;
 
     try {
       await PubSubService.createTopic(projectId, finalTopicId);
+      setCreateTopicModalOpen(false);
       fetchData();
     } catch (err: any) {
       alert('Error creating topic: ' + (err.response?.data?.error?.message || err.message));
@@ -54,26 +66,20 @@ function App() {
   };
 
   const handleCreateSubscription = async () => {
-    const subId = prompt('Enter Subscription ID:');
-    if (!subId) return;
+    setNewSubName('');
+    setSelectedTopicForSub(topics.length > 0 ? topics[0].name : '');
+    setCreateSubModalOpen(true);
+  };
 
-    let topicName = '';
-    if (topics.length > 0) {
-      const topicList = topics.map((t, i) => `${i + 1}. ${t.name.split('/').pop()}`).join('\n');
-      const choice = prompt(`Select a topic by number or enter full topic name:\n${topicList}`);
-      if (!choice) return;
+  const submitCreateSubscription = async () => {
+    if (!newSubName) return;
 
-      const index = parseInt(choice) - 1;
-      if (!isNaN(index) && topics[index]) {
-        topicName = topics[index].name;
-      } else {
-        topicName = choice;
-      }
-    } else {
-      topicName = prompt('Enter Topic Name (full path or ID):') || '';
+    let topicName = selectedTopicForSub;
+    if (!topicName) {
+      // Fallback or error handling if no topic selected
+      alert('Please select a topic');
+      return;
     }
-
-    if (!topicName) return;
 
     // Ensure topic name is full path
     const fullTopicName = topicName.startsWith('projects/')
@@ -81,13 +87,13 @@ function App() {
       : `projects/${projectId}/topics/${topicName}`;
 
     try {
-      await PubSubService.createSubscription(projectId, subId, fullTopicName);
+      await PubSubService.createSubscription(projectId, newSubName, fullTopicName);
+      setCreateSubModalOpen(false);
       fetchData();
     } catch (err: any) {
       alert('Error creating subscription: ' + (err.response?.data?.error?.message || err.message));
     }
   };
-
 
   const handleDeleteTopic = async (e: React.MouseEvent, name: string) => {
     e.stopPropagation();
@@ -296,6 +302,78 @@ function App() {
       <footer style={{ marginTop: 'auto', padding: '2rem', textAlign: 'center', borderTop: '1px solid var(--border-color)', color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
         Google Pub/Sub Emulator Admin • Local Development Tool
       </footer>
+
+      {/* Create Topic Modal */}
+      <Modal
+        isOpen={createTopicModalOpen}
+        onClose={() => setCreateTopicModalOpen(false)}
+        title="Create New Topic"
+        actions={
+          <>
+            <button className="Button Button-Outline" onClick={() => setCreateTopicModalOpen(false)}>Cancel</button>
+            <button className="Button Button-Primary" onClick={submitCreateTopic}>Create Topic</button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>Topic ID</label>
+            <input
+              type="text"
+              value={newTopicName}
+              onChange={(e) => setNewTopicName(e.target.value)}
+              placeholder="e.g. my-topic"
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)' }}
+              onKeyDown={(e) => e.key === 'Enter' && submitCreateTopic()}
+            />
+            <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              The topic will be created in project <code>{projectId}</code>.
+            </p>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Create Subscription Modal */}
+      <Modal
+        isOpen={createSubModalOpen}
+        onClose={() => setCreateSubModalOpen(false)}
+        title="Create New Subscription"
+        actions={
+          <>
+            <button className="Button Button-Outline" onClick={() => setCreateSubModalOpen(false)}>Cancel</button>
+            <button className="Button Button-Primary" onClick={submitCreateSubscription}>Create Subscription</button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>Subscription ID</label>
+            <input
+              type="text"
+              value={newSubName}
+              onChange={(e) => setNewSubName(e.target.value)}
+              placeholder="e.g. my-sub"
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)' }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>Select Topic</label>
+            {topics.length > 0 ? (
+              <select
+                value={selectedTopicForSub}
+                onChange={(e) => setSelectedTopicForSub(e.target.value)}
+                style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)' }}
+              >
+                {topics.map(t => (
+                  <option key={t.name} value={t.name}>{t.name.split('/').pop()}</option>
+                ))}
+              </select>
+            ) : (
+              <p style={{ color: 'var(--danger-color)' }}>No topics available. Create a topic first.</p>
+            )}
+          </div>
+        </div>
+      </Modal>
 
       <style>{`
         .spin { animation: spin 1s linear infinite; }
